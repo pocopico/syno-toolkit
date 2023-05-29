@@ -13,11 +13,11 @@ on:
       pat-address:
         description: 'Pat file URL'
         required: true
-        default: 'https://global.download.synology.com/download/DSM/release/7.1.1/42962/DSM_SA6400_42962.pat'
+        default: 'https://global.synologydownload.com/download/DSM/release/7.2/64561/DSM_SA6400_64561.pat'
       toolchain:
         description: 'DSM toolchain URL for repack zImage'
         required: true
-        default: 'https://global.download.synology.com/download/ToolChain/toolchain/7.1-42661/AMD%20x86%20Linux%20Linux%205.10.55%20%28epyc7002%29/epyc7002-gcc850_glibc226_x86_64-GPL.txz'
+        default: 'https://global.synologydownload.com/download/ToolChain/toolchain/7.2-63134/AMD%20x86%20Linux%20Linux%205.10.55%20%28epyc7002%29/epyc7002-gcc1220_glibc236_x86_64-GPL.txz'
       linux-src:
         description: 'Linux kernel source URL for repack zImage'
         required: true
@@ -83,12 +83,7 @@ jobs:
           sha256sum pat/rd.gz >> checksum.sha256
           sha256sum vmlinux >> checksum.sha256
           # patch vmlinux
-          # vmlinux_mod.bin
-          #curl -L https://github.com/jumkey/dsm-research/raw/master/tools/common.php -o common.php
-          #curl -L https://github.com/jumkey/dsm-research/raw/master/tools/patch-ramdisk-check.php -o patch-ramdisk-check.php
-          #curl -L https://github.com/jumkey/dsm-research/raw/master/tools/patch-boot_params-check.php -o patch-boot_params-check.php
-          #php patch-boot_params-check.php vmlinux vmlinux-mod
-          #php patch-ramdisk-check.php vmlinux-mod vmlinux_mod.bin
+         
           # New fabio patching method 
           echo "Patching Kernel"
           curl --insecure -L https://github.com/pocopico/tinycore-redpill/raw/main/tools/bzImage-to-vmlinux.sh -o bzImage-to-vmlinux.sh
@@ -97,7 +92,7 @@ jobs:
 
           sudo chmod a+x bzImage-to-vmlinux.sh vmlinux-to-bzImage.sh kpatch
           ./kpatch vmlinux vmlinux-mod 
-          #vmlinux-to-bzImage.sh vmlinux-mod bzImage
+          #./vmlinux-to-bzImage.sh vmlinux-mod bzImage
 
           git clone https://github.com/kiler129/recreate-zImage.git
           chmod a+x recreate-zImage/rebuild_kernel.sh
@@ -120,7 +115,7 @@ jobs:
           make clean
           sed -i 's/bzImage: vmlinux/bzImage: /' arch/x86/Makefile
           make vmlinux -j4 || true # make some *.o inspire by UnknowO
-          cp ../vmlinux_mod.bin vmlinux # vmlinux_mod.bin is already stripped of debugging and comments, strippe again should be ok
+          cp ../vmlinux-mod vmlinux # ../vmlinux-mod is already stripped of debugging and comments, strippe again should be ok
           make bzImage
           sed -i 's/bzImage: /bzImage: vmlinux/' arch/x86/Makefile
           cp arch/x86/boot/bzImage ../zImage_mod
@@ -135,14 +130,14 @@ jobs:
           sed -i 's/ objcopy / ${CROSS_COMPILE}objcopy /' ../recreate-zImage/rebuild_kernel.sh
           sed -i 's/(objdump /(${CROSS_COMPILE}objdump /' ../recreate-zImage/rebuild_kernel.sh
           sed -i 's/ readelf / ${CROSS_COMPILE}readelf /' ../recreate-zImage/rebuild_kernel.sh
-          ../recreate-zImage/rebuild_kernel.sh $PWD/../linux-src ../vmlinux_mod.bin ../zImage_mod
+          ../recreate-zImage/rebuild_kernel.sh $PWD/../linux-src ../vmlinux-mod ../zImage_mod
           # ----------
           cd ..
           bsdiff pat/zImage zImage_mod diff.bsp
 
           echo '---copy file---'
           cp vmlinux /opt/dist
-          cp vmlinux_mod.bin /opt/dist
+          cp ../vmlinux-mod /opt/dist
           cp diff.bsp /opt/dist
           cp checksum.sha256 /opt/dist
           echo '---END---'
